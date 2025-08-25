@@ -1,11 +1,14 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Pressel test</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VIP</title>
     <script>
         const API_BASE_URL = 'https://hottrack.vercel.app';
         const SELLER_API_KEY = '3d948367-6b39-46a1-8ba3-57703bf2bad3';
-        const PRESSEL_ID = 26;
+        const PRESSEL_ID = 53;
         const TELEGRAM_USERNAME = 'alinefrancabot';
         const WHITE_PAGE_URL = 'https://br.pinterest.com/pin/22095854406665522/';
         const PIXELS_TO_TRACK = [
@@ -14,10 +17,42 @@
   }
 ];
         
-        const isBot=()=>/bot|facebook|crawler|spider|preview/i.test(navigator.userAgent),isMobile=()=>/android|iphone|ipad|ipod/i.test(navigator.userAgent);
-        async function handleRedirect(){if(isBot()||!isMobile()){window.location.replace(WHITE_PAGE_URL);return}
-        try{const t=new URLSearchParams(window.location.search),e=await fetch(`${API_BASE_URL}/api/registerClick`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sellerApiKey:SELLER_API_KEY,presselId:PRESSEL_ID,referer:document.referrer||null,fbclid:t.get("fbclid")||null,fbp:document.cookie.match(/_fbp=([^;]+)/)?.[1]||null,fbc:document.cookie.match(/_fbc=([^;]+)/)?.[1]||null,user_agent:navigator.userAgent})}),a=await e.json();e.ok&&"success"===a.status?window.location.replace(`https://t.me/${TELEGRAM_USERNAME}?start=${a.click_id}`):window.location.replace(WHITE_PAGE_URL)}catch(t){window.location.replace(WHITE_PAGE_URL)}}
-        handleRedirect();
+        const isBot = () => /bot|facebook|crawler|spider|preview/i.test(navigator.userAgent);
+        const isMobile = () => /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+
+        async function handleRedirect() {
+            if (isBot() || !isMobile()) {
+                window.location.replace(WHITE_PAGE_URL);
+                return;
+            }
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const response = await fetch(`${API_BASE_URL}/api/registerClick`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        sellerApiKey: SELLER_API_KEY,
+                        presselId: PRESSEL_ID,
+                        referer: document.referrer || null,
+                        fbclid: params.get("fbclid") || null,
+                        fbp: document.cookie.match(/_fbp=([^;]+)/)?.[1] || null,
+                        fbc: document.cookie.match(/_fbc=([^;]+)/)?.[1] || null,
+                        user_agent: navigator.userAgent
+                    })
+                });
+                const data = await response.json();
+                if (response.ok && data.status === "success") {
+                    window.location.replace(`https://t.me/${TELEGRAM_USERNAME}?start=${data.click_id}`);
+                } else {
+                    window.location.replace(WHITE_PAGE_URL);
+                }
+            } catch (error) {
+                window.location.replace(WHITE_PAGE_URL);
+            }
+        }
+        
+        // ALTERAÇÃO APLICADA AQUI: Adiciona um atraso para permitir que o Pixel crie os cookies.
+        setTimeout(handleRedirect, 500);
     </script>
     <script>
         !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src='https://connect.facebook.net/en_US/fbevents.js';s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script');

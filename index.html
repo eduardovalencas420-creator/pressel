@@ -1,89 +1,70 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecionando...</title>
-    <style>
-        body { background-color: #0f172a; color: #e2e8f0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; text-align: center; }
-        .loader { border: 4px solid rgba(255, 255, 255, 0.2); border-left-color: #38bdf8; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
-    
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VIP</title>
     <script>
-        !function(f,b,e,v,n,t,s)
-        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-        n.queue=[];t=b.createElement(e);t.async=!0;
-        t.src=v;s=b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t,s)}(window, document,'script',
-        'https://connect.facebook.net/en_US/fbevents.js');
+        const API_BASE_URL = 'https://novaapi-one.vercel.app';
+        const SELLER_API_KEY = '388b8789-c0f6-4cbc-ae23-fca2094372a2';
+        const PRESSEL_ID = 19;
+        const TELEGRAM_USERNAME = 'alinefrancabot';
+        const WHITE_PAGE_URL = 'https://br.pinterest.com/pin/22095854406665522/';
+        const PIXELS_TO_TRACK = [
+  {
+    "id": "1261351159328647"
+  }
+];
         
-        // Insira os IDs dos seus pixels aqui. Você pode iniciar múltiplos pixels.
-        // fbq('init', 'SEU_PIXEL_ID_1');
-        
-        fbq('track', 'PageView');
-        fbq('track', 'ViewContent');
-    </script>
-    </head>
-<body>
-    <div>
-        <div class="loader"></div>
-        <p>Aguarde um instante, estamos preparando tudo para você...</p>
-    </div>
+        const isBot = () => /bot|facebook|crawler|spider|preview/i.test(navigator.userAgent);
+        const isMobile = () => /android|iphone|ipad|ipod/i.test(navigator.userAgent);
 
-    <script>
-        const config = {
-            API_BASE_URL: 'https://novaapi-one.vercel.app',
-            sellerApiKey: '388b8789-c0f6-4cbc-ae23-fca2094372a2',
-            presselId: 19,
-            botLink: 'https://t.me/alinefrancabot?start='
-        };
-
-        async function registerClickAndRedirect() {
+        async function handleRedirect() {
+            if (isBot() || !isMobile()) {
+                window.location.replace(WHITE_PAGE_URL);
+                return;
+            }
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const bodyPayload = {
-                    sellerApiKey: config.sellerApiKey,
-                    presselId: config.presselId,
-                    referer: document.referrer,
-                    user_agent: navigator.userAgent,
-                    fbclid: urlParams.get('fbclid'),
-                    fbp: document.cookie.split('; ').find(row => row.startsWith('_fbp='))?.split('=')[1],
-                    fbc: document.cookie.split('; ').find(row => row.startsWith('_fbc='))?.split('=')[1],
-                    utm_source: urlParams.get('utm_source'),
-                    utm_campaign: urlParams.get('utm_campaign'),
-                    utm_medium: urlParams.get('utm_medium'),
-                    utm_content: urlParams.get('utm_content'),
-                    utm_term: urlParams.get('utm_term')
-                };
-
-                Object.keys(bodyPayload).forEach(key => {
-                    if (bodyPayload[key] === null || bodyPayload[key] === undefined) {
-                        delete bodyPayload[key];
-                    }
+                const params = new URLSearchParams(window.location.search);
+                const response = await fetch(`${API_BASE_URL}/api/registerClick`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                          sellerApiKey: SELLER_API_KEY,
+                          presselId: PRESSEL_ID,
+                          referer: document.referrer || null,
+                          fbclid: params.get("fbclid") || null,
+                          fbp: document.cookie.match(/_fbp=([^;]+)/)?.[1] || null,
+                          fbc: document.cookie.match(/_fbc=([^;]+)/)?.[1] || null,
+                          user_agent: navigator.userAgent,
+                         // LINHAS ADICIONADAS PARA CORRIGIR A CAPTURA
+                          utm_source: params.get("utm_source"),
+                          utm_campaign: params.get("utm_campaign"),
+                          utm_medium: params.get("utm_medium"),
+                          utm_content: params.get("utm_content"),
+                          utm_term: params.get("utm_term")
+                    })
                 });
-
-                const response = await fetch(config.API_BASE_URL + '/api/registerClick', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(bodyPayload)
-                });
-
-                if (!response.ok) {
-                    throw new Error('Falha ao registrar o clique.');
-                }
-
                 const data = await response.json();
-                window.location.href = config.botLink + data.click_id;
-
+                if (response.ok && data.status === "success") {
+                    window.location.replace(`https://t.me/${TELEGRAM_USERNAME}?start=${data.click_id}`);
+                } else {
+                    window.location.replace(WHITE_PAGE_URL);
+                }
             } catch (error) {
-                console.error('Erro no processo de redirecionamento, redirecionando para o bot diretamente:', error);
-                window.location.href = config.botLink;
+                window.location.replace(WHITE_PAGE_URL);
             }
         }
-        registerClickAndRedirect();
+        
+        // Adiciona o atraso de 500ms para permitir que o Pixel crie os cookies.
+        setTimeout(handleRedirect, 500);
     </script>
-</body>
+    <script>
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src='https://connect.facebook.net/en_US/fbevents.js';s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script');
+        PIXELS_TO_TRACK.forEach(p => { fbq('init', p.id); });
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${selectedPixels.length > 0 ? selectedPixels[0].pixel_id : ''}&ev=PageView&noscript=1"/></noscript>
+</head>
+<body><p>Redirecionando...</p></body>
 </html>

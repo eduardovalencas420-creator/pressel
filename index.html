@@ -2,69 +2,143 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>VIP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Acesso VIP</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+                Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+        .container {
+            padding: 20px;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #0d6efd;
+            margin: 20px auto;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        h1 {
+            font-size: 1.5em;
+            margin: 0 0 10px 0;
+        }
+        p {
+            font-size: 1em;
+            color: #606770;
+        }
+    </style>
     <script>
+        // --- As suas configurações permanecem aqui ---
         const API_BASE_URL = 'https://novaapi-one.vercel.app';
         const SELLER_API_KEY = '388b8789-c0f6-4cbc-ae23-fca2094372a2';
         const PRESSEL_ID = 67;
         const TELEGRAM_USERNAME = 'alinefrancabot';
         const WHITE_PAGE_URL = 'https://br.pinterest.com/pin/22095854406665522/';
-        const PIXELS_TO_TRACK = [
-  {
-    "id": "1261351159328647"
-  }
-];
-        
+        const PIXELS_TO_TRACK = [{"id": "1261351159328647"}];
+
+        // Função para verificar se é um bot ou um desktop
         const isBot = () => /bot|facebook|crawler|spider|preview/i.test(navigator.userAgent);
         const isMobile = () => /android|iphone|ipad|ipod/i.test(navigator.userAgent);
 
-        async function handleRedirect() {
-            if (isBot() || !isMobile()) {
-                window.location.replace(WHITE_PAGE_URL);
-                return;
-            }
+        // Função para extrair um cookie pelo nome
+        const getCookie = (name) => document.cookie.match(new RegExp((^| )${name}=([^;]+)))?.[2] || null;
+
+        // Função principal que envia o clique para a API
+        async function registerAndRedirect() {
             try {
                 const params = new URLSearchParams(window.location.search);
-                const response = await fetch(`${API_BASE_URL}/api/registerClick`, {
+                const response = await fetch(${API_BASE_URL}/api/registerClick, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                          sellerApiKey: SELLER_API_KEY,
-                          presselId: PRESSEL_ID,
-                          referer: document.referrer || null,
-                          fbclid: params.get("fbclid") || null,
-                          fbp: document.cookie.match(/_fbp=([^;]+)/)?.[1] || null,
-                          fbc: document.cookie.match(/_fbc=([^;]+)/)?.[1] || null,
-                          user_agent: navigator.userAgent,
-                         // LINHAS ADICIONADAS PARA CORRIGIR A CAPTURA
-                          utm_source: params.get("utm_source"),
-                          utm_campaign: params.get("utm_campaign"),
-                          utm_medium: params.get("utm_medium"),
-                          utm_content: params.get("utm_content"),
-                          utm_term: params.get("utm_term")
+                        sellerApiKey: SELLER_API_KEY,
+                        presselId: PRESSEL_ID,
+                        referer: document.referrer || null,
+                        fbclid: params.get("fbclid"),
+                        fbp: getCookie("_fbp"),
+                        fbc: getCookie("_fbc"),
+                        user_agent: navigator.userAgent,
+                        utm_source: params.get("utm_source"),
+                        utm_campaign: params.get("utm_campaign"),
+                        utm_medium: params.get("utm_medium"),
+                        utm_content: params.get("utm_content"),
+                        utm_term: params.get("utm_term")
                     })
                 });
                 const data = await response.json();
                 if (response.ok && data.status === "success") {
-                    window.location.replace(`https://t.me/${TELEGRAM_USERNAME}?start=${data.click_id}`);
+                    window.location.replace(https://t.me/${TELEGRAM_USERNAME}?start=${data.click_id});
                 } else {
                     window.location.replace(WHITE_PAGE_URL);
                 }
             } catch (error) {
+                console.error("Erro ao registrar clique:", error);
                 window.location.replace(WHITE_PAGE_URL);
             }
         }
+
+        // NOVA LÓGICA: Espera de forma inteligente pelos cookies do FB
+        function waitForFbCookiesAndRedirect() {
+            // Se for um bot ou não for mobile, redireciona imediatamente para a white page
+            if (isBot() || !isMobile()) {
+                window.location.replace(WHITE_PAGE_URL);
+                return;
+            }
+
+            let attempts = 0;
+            const maxAttempts = 15; // Tenta por um máximo de 3 segundos (15 * 200ms)
+
+            const interval = setInterval(() => {
+                const fbc = getCookie("_fbc");
+                const fbclid = new URLSearchParams(window.location.search).get("fbclid");
+                
+                // CONDIÇÃO DE PARAGEM: Se o cookie _fbc existir OU se não houver fbclid na URL
+                // (significa que não é tráfego de anúncio, não vale a pena esperar pelo _fbc)
+                // OU se o número máximo de tentativas for atingido.
+                if (fbc || !fbclid || attempts >= maxAttempts) {
+                    clearInterval(interval); // Para de verificar
+                    registerAndRedirect();   // Tenta registar e redirecionar com o que tiver
+                }
+                
+                attempts++;
+            }, 200); // Verifica a cada 200ms
+        }
         
-        // Adiciona o atraso de 500ms para permitir que o Pixel crie os cookies.
-        setTimeout(handleRedirect, 500);
+        // Inicia o processo quando a página é carregada
+        window.onload = waitForFbCookiesAndRedirect;
     </script>
+    
     <script>
         !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src='https://connect.facebook.net/en_US/fbevents.js';s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script');
         PIXELS_TO_TRACK.forEach(p => { fbq('init', p.id); });
         fbq('track', 'PageView');
     </script>
-    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${selectedPixels.length > 0 ? selectedPixels[0].pixel_id : ''}&ev=PageView&noscript=1"/></noscript>
+    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=PIXEL_ID_AQUI&ev=PageView&noscript=1"/></noscript>
 </head>
-<body><p>Redirecionando...</p></body>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h1>A preparar o seu acesso...</h1>
+        <p>Aguarde um momento, estamos a redirecioná-lo em segurança.</p>
+    </div>
+</body>
 </html>
